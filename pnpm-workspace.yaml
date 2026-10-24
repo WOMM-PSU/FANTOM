@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/*
+  - tools/*
+
+# tsx/vitest run on esbuild, whose install script fetches the platform binary.
+allowBuilds:
+  esbuild: true
