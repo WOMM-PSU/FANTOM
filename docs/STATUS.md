@@ -1,6 +1,6 @@
 # Track status
 
-Updated: 2026-10-24 (Dev A M0/M1 and Dev C M0/core session)
+Updated: 2026-10-24 (Dev A M0/M1, Dev B M0–M6, Dev C M0/core + full-stack tunnel check)
 
 One section per developer. Keep it current at the end of every session:
 **Done · In progress · Blocked on · Contract change requests · Known issues**.
@@ -104,6 +104,11 @@ One section per developer. Keep it current at the end of every session:
 
 - Verified via automated unit tests, `tsc`, and `next build` on desktop; real two-phone QR join verification over HTTPS is pending `pnpm dev:tunnel`.
 - In `ActiveMatchHud.tsx`, the camera aiming viewport currently renders a placeholder slot and a `[DEV_ONLY]` simulated target picker (only shown when `config.devMode === true`) until Dev C delivers `apps/web/features/aiming`.
+- **Cross-track integration note (Dev C, 2026-10-24):** a full-stack tunnel run exposed a WebSocket
+  reconnect loop. `useGameSocket` depends on the `clock` object, while `useServerClock` returns a
+  new object on every render; the first `WELCOME` renders the lobby, then the effect closes and
+  reopens the socket. B-owned fix: memoize the clock controller or read it through a ref inside
+  `useGameSocket`. Not changed here to respect file ownership.
 
 ## Dev C — Aiming, sensors & platform
 
@@ -148,7 +153,11 @@ One section per developer. Keep it current at the end of every session:
   https://<tunnel>` completed a 3-player lobby over WSS; allowed origin opened, disallowed origin
   rejected (401); CORS allowed 204 with header, denied without. The helper rendered a terminal QR
   code for `WEB_PATH=/aim-lab.html`, and that HTTPS URL returned 200. **No phone camera has scanned
-  the QR code**, and no real phone or real camera result is claimed.
+  the  QR code**, and no real phone or real camera result is claimed.
+- **Post-merge full-stack check:** Next.js home and match routes over HTTPS returned 200,
+  `POST /api/matches` returned 201, the WSS handshake returned `WELCOME`, and the lobby rendered.
+  The check also found the B-owned reconnect loop recorded in `docs/testing.md`. Desktop only; no
+  phone result.
 
 ### In progress
 
@@ -160,8 +169,10 @@ One section per developer. Keep it current at the end of every session:
 
 - **Human:** two real phones and device access. The coding environment cannot run S15.3/S15.4 or
   produce honest device results.
-- **Dev B:** `apps/web` app shell and the integrated `/dev/aim-lab` route. The standalone lab works
-  in the meantime, but the production `AimView`/`PlayerMarker` surface belongs in B's app.
+- **Dev B:** its placeholder `features/hud/aimingBridge.tsx` duplicates the P5.3 surface until
+  C's `features/aiming` lands. B's app shell now exists; the remaining gaps are C's production
+  aiming surface and a larger target-marker display (B's HUD currently uses 76 px). The standalone
+  lab remains the only real camera/marker test surface.
 - **Team:** choose a lint tool/root `lint` script; review the ambiguity, relative-heading and
   GPS-slack-cap decisions below.
 - **Dev A:** none for geo/angles now; fixtures and `evaluateAim` are ready for M2/M3 consumption.

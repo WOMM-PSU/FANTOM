@@ -45,6 +45,19 @@ sensor or posture results.
 | Disallowed WebSocket origin | Upgrade rejected (HTTP **401**) for `https://evil.example` |
 | CORS preflight | Allowed origin **204** with `access-control-allow-origin`; disallowed origin **204** without that header (browser blocks) |
 
+### Full-stack app check (desktop browser, 2026-10-24)
+
+Ran the real Next.js app and game server through two quick tunnels with
+`PORT=8080 WEB_PORT=3000 pnpm dev:tunnel`. This is a desktop-browser check, **not** a phone result.
+
+| Check | Observed |
+|---|---|
+| Web home over HTTPS | **200**; create/join forms rendered |
+| Create match through the API tunnel | **201**; join code `S7SB4` and join URL rendered |
+| WebSocket handshake over `wss://` | Opened; server sent `WELCOME` with a player ID |
+| Lobby render | Host, player count, settings and start requirements rendered |
+| Stable socket | **Failed.** `useGameSocket` reconnects continuously because `useServerClock` returns a new `clock` object each render. Each cycle has one failed socket and one that opens, receives `WELCOME`, then is torn down by the effect cleanup. B-owned; not fixed here. |
+
 Reproduce the transport check without the app:
 
 ```bash
