@@ -10,6 +10,7 @@ import type {
 import { MAX_PLAYERS } from "@fantom/shared";
 import { QrCodeSvg } from "@/components/QrCodeSvg";
 import { buildCircularArenaPolygon } from "@/lib/arena";
+import { getTeamBadge, ROLE_INFO } from "@/lib/messages";
 import type { GeoPermissionStatus } from "@/hooks/useGeolocation";
 import styles from "./LobbyView.module.css";
 
@@ -161,6 +162,8 @@ export function LobbyView({
           {state.players.map((player) => {
             const playerIsHost = player.id === state.hostPlayerId;
             const playerIsSelf = player.id === state.self.playerId;
+            const teamBadge = getTeamBadge(player.teamId);
+            const roleInfo = player.role ? ROLE_INFO[player.role] : null;
             return (
               <li key={player.id} className={styles.playerItem}>
                 <div className={styles.playerInfo}>
@@ -170,6 +173,23 @@ export function LobbyView({
                   )}
                   {playerIsSelf && (
                     <span className={`${styles.badge} ${styles.selfBadge}`}>YOU</span>
+                  )}
+                  {teamBadge && (
+                    <span
+                      className={styles.badge}
+                      style={{
+                        background: teamBadge.bgColor,
+                        color: teamBadge.color,
+                        border: `1px solid ${teamBadge.color}`,
+                      }}
+                    >
+                      {teamBadge.symbol} {teamBadge.label}
+                    </span>
+                  )}
+                  {roleInfo && (
+                    <span className={styles.badge} style={{ background: "#1e293b", color: "#e2e8f0" }}>
+                      {roleInfo.icon} {roleInfo.badge}
+                    </span>
                   )}
                   {!player.connected && (
                     <span className={`${styles.badge} ${styles.offlineBadge}`}>
@@ -274,7 +294,89 @@ export function LobbyView({
               <option value={900}>15 Minutes</option>
             </select>
           </label>
+
+          <label className={styles.fieldLabel}>
+            Max Weapon Range
+            <select
+              className={styles.select}
+              disabled={!isHost}
+              value={state.config.maxRangeM}
+              onChange={(e) =>
+                onUpdateConfig({ maxRangeM: Number(e.target.value) })
+              }
+            >
+              <option value={15}>15 meters</option>
+              <option value={30}>30 meters (Default)</option>
+              <option value={50}>50 meters</option>
+              <option value={75}>75 meters</option>
+            </select>
+          </label>
+
+          <label className={styles.fieldLabel}>
+            Spawn Lockout
+            <select
+              className={styles.select}
+              disabled={!isHost}
+              value={state.config.spawnLockoutSec}
+              onChange={(e) =>
+                onUpdateConfig({ spawnLockoutSec: Number(e.target.value) })
+              }
+            >
+              <option value={0}>0s (None)</option>
+              <option value={5}>5s (FFA/TDM Default)</option>
+              <option value={15}>15s (Assassin Default)</option>
+              <option value={30}>30s</option>
+            </select>
+          </label>
         </div>
+
+        {/* Team Deathmatch Specific Settings (M5) */}
+        {state.config.mode === "team_deathmatch" && (
+          <div className={styles.fieldGrid}>
+            <label className={styles.fieldLabel}>
+              Number of Teams
+              <select
+                className={styles.select}
+                disabled={!isHost}
+                value={state.config.team.teamCount}
+                onChange={(e) =>
+                  onUpdateConfig({
+                    team: {
+                      ...state.config.team,
+                      teamCount: Number(e.target.value),
+                    },
+                  })
+                }
+              >
+                <option value={2}>2 Teams</option>
+                <option value={3}>3 Teams</option>
+                <option value={4}>4 Teams</option>
+              </select>
+            </label>
+
+            <label className={styles.fieldLabel}>
+              Killers per Healer
+              <select
+                className={styles.select}
+                disabled={!isHost}
+                value={state.config.team.killersPerHealer}
+                onChange={(e) =>
+                  onUpdateConfig({
+                    team: {
+                      ...state.config.team,
+                      killersPerHealer: Number(e.target.value),
+                    },
+                  })
+                }
+              >
+                <option value={1}>1 Killer : 1 Healer</option>
+                <option value={2}>2 Killers : 1 Healer</option>
+                <option value={3}>3 Killers : 1 Healer</option>
+                <option value={4}>4 Killers : 1 Healer</option>
+              </select>
+            </label>
+          </div>
+        )}
 
         {/* Arena Boundary Configuration (PLAN.md P2 #8 & S10.6) */}
         <div className={styles.permissionRow} style={{ flexDirection: "column", alignItems: "stretch" }}>
@@ -349,7 +451,35 @@ export function LobbyView({
           <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
-              disabled={!isHost}
+              disabled={!isHost || !state.config.minimap.enabled}
+              checked={state.config.minimap.showAllies}
+              onChange={(e) =>
+                onUpdateConfig({
+                  minimap: { ...state.config.minimap, showAllies: e.target.checked },
+                })
+              }
+            />
+            Show Teammates
+          </label>
+
+          <label className={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              disabled={!isHost || !state.config.minimap.enabled}
+              checked={state.config.minimap.showPickups}
+              onChange={(e) =>
+                onUpdateConfig({
+                  minimap: { ...state.config.minimap, showPickups: e.target.checked },
+                })
+              }
+            />
+            Show Pickups on Map
+          </label>
+
+          <label className={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              disabled={!isHost || state.config.mode === "assassin"}
               checked={state.config.pickups.weapons}
               onChange={(e) =>
                 onUpdateConfig({
@@ -371,17 +501,21 @@ export function LobbyView({
                 })
               }
             />
-            Health Packs
+            Health Packs (+25)
           </label>
 
           <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
               disabled={!isHost}
-              checked={state.config.devMode}
-              onChange={(e) => onUpdateConfig({ devMode: e.target.checked })}
+              checked={state.config.pickups.shields}
+              onChange={(e) =>
+                onUpdateConfig({
+                  pickups: { ...state.config.pickups, shields: e.target.checked },
+                })
+              }
             />
-            [DEV_ONLY] Dev Mode
+            Shield Pickups (+50)
           </label>
         </div>
 

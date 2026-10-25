@@ -24,10 +24,13 @@ import {
   type PlayerPublic,
   type PlayerRole,
   type PlayerStatus,
+  type PickupView,
   type SelfView,
   type LatLng,
   type ErrorCode,
   type ServerMessage as ServerMessageType,
+  HEAL,
+  HEALTH_PACK_AMOUNT,
 } from "@fantom/shared";
 
 const PORT = Number(process.env.MOCK_PORT ?? process.env.PORT ?? 8080);
@@ -79,6 +82,8 @@ type InternalMatch = {
   hostPlayerId: string;
   config: MatchConfig;
   players: Map<string, InternalPlayer>;
+  pickups: PickupView[];
+  teamScores: Record<string, number>;
   countdownEndsAt: number | null;
   startedAt: number | null;
   endsAt: number | null;
@@ -205,8 +210,8 @@ function buildMatchStateForRecipient(match: InternalMatch, viewerId: string): Ma
     config: match.config,
     players,
     self,
-    pickups: [],
-    teamScores: {},
+    pickups: match.pickups,
+    teamScores: match.teamScores,
     countdownEndsAt: match.countdownEndsAt,
     startedAt: match.startedAt,
     endsAt: match.endsAt,
@@ -342,6 +347,41 @@ const server = http.createServer(async (req, res) => {
       hostPlayerId: host.id,
       config: buildConfig(parsed.data.config as Partial<MatchConfig> | undefined),
       players,
+      pickups: [
+        {
+          id: "pickup-ravager",
+          kind: "weapon",
+          weaponId: "ravager",
+          position: { lat: 40.79825, lng: -77.85985 },
+          available: true,
+          respawnAt: null,
+        },
+        {
+          id: "pickup-viper",
+          kind: "weapon",
+          weaponId: "viper",
+          position: { lat: 40.79815, lng: -77.85995 },
+          available: true,
+          respawnAt: null,
+        },
+        {
+          id: "pickup-shield",
+          kind: "shield",
+          weaponId: null,
+          position: { lat: 40.79822, lng: -77.85992 },
+          available: true,
+          respawnAt: null,
+        },
+        {
+          id: "pickup-health",
+          kind: "health",
+          weaponId: null,
+          position: { lat: 40.79818, lng: -77.85988 },
+          available: true,
+          respawnAt: null,
+        },
+      ],
+      teamScores: { "team-1": 0, "team-2": 0 },
       countdownEndsAt: null,
       startedAt: null,
       endsAt: null,
@@ -697,6 +737,73 @@ wss.on("connection", (ws) => {
             damageDealt: weapon.damage,
             eliminated,
           },
+          msg.id
+        );
+        broadcastMatchState(match);
+        break;
+      }
+
+      case "REQUEST_HEAL": {
+        if (match.phase !== "active") {
+          sendServerMsg(conn, "HEAL_REJECTED", { reason: "WRONG_PHASE" }, msg.id);
+          return;
+        }
+        if (player.role !== "healer") {
+          sendServerMsg(conn, "HEAL_REJECTED", { reason: "ROLE_CANNOT_ACT" }, msg.id);
+          return;
+        }
+        const target = Array.from(match.players.values()).find(
+          (p) => p.markerCode === msg.payload.targetMarkerCode
+        );
+        if (!target) {
+          sendServerMsg(conn, "HEAL_REJECTED", { reason: "INVALID_TARGET" }, msg.id);
+          return;
+        }
+        if (target.id === player.id) {
+          sendServerMsg(conn, "HEAL_REJECTED", { reason: "HEAL_SELF" }, msg.id);
+          return;
+        }
+        if (target.health >= target.maxHealth) {
+          sendServerMsg(conn, "HEAL_REJECTED", { reason: "HEAL_FULL_HEALTH" }, msg.id);
+          return;
+        }
+        const healAmt = Math.min(HEAL.amount, target.maxHealth - target.health);
+        target.health += healAmt;
+        sendServerMsg(
+          conn,
+          "HEAL_APPLIED",
+          { healerId: player.id, targetId: target.id, amount: healAmt },
+          msg.id
+        );
+        broadcastMatchState(match);
+        break;
+      }
+
+      case "REQUEST_PICKUP": {
+        if (match.phase !== "active") {
+          sendServerMsg(conn, "PICKUP_REJECTED", { reason: "WRONG_PHASE" }, msg.id);
+          return;
+        }
+        const pk = match.pickups.find((p) => p.id === msg.payload.pickupId);
+        if (!pk || !pk.available) {
+          sendServerMsg(conn, "PICKUP_REJECTED", { reason: "PICKUP_UNAVAILABLE" }, msg.id);
+          return;
+        }
+        if (pk.kind === "weapon" && pk.weaponId) {
+          player.weaponId = pk.weaponId;
+          player.ammo = WEAPONS[pk.weaponId].magazineSize;
+          player.reloadCompleteAt = null;
+        } else if (pk.kind === "shield") {
+          player.shield = MAX_SHIELD;
+        } else if (pk.kind === "health") {
+          player.health = Math.min(player.maxHealth, player.health + HEALTH_PACK_AMOUNT);
+        }
+        pk.available = false;
+        pk.respawnAt = Date.now() + match.config.pickups.respawnSec * 1000;
+        sendServerMsg(
+          conn,
+          "PICKUP_COLLECTED",
+          { pickupId: pk.id, byPlayerId: player.id, kind: pk.kind },
           msg.id
         );
         broadcastMatchState(match);

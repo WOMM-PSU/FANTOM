@@ -283,6 +283,13 @@ export default function MatchPage() {
           clock={clock}
           lastFeedback={socket.lastFeedback}
           onShoot={(evidence) => socket.sendMessage("REQUEST_SHOT", { evidence })}
+          onHeal={(targetMarkerCode, evidence) =>
+            socket.sendMessage("REQUEST_HEAL", {
+              targetMarkerCode,
+              ...(evidence ? { evidence } : {}),
+            })
+          }
+          onPickup={(pickupId) => socket.sendMessage("REQUEST_PICKUP", { pickupId })}
           onLeaveMatch={handleLeave}
         />
       ) : (

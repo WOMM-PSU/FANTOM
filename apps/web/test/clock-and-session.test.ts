@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ClientMessage, ServerMessage, PROTOCOL_VERSION } from "@fantom/shared";
+import {
+  ClientMessage,
+  ServerMessage,
+  RejectReason,
+  AimEvidence,
+  PROTOCOL_VERSION,
+} from "@fantom/shared";
 import {
   computeClockSampleOffset,
   smoothClockOffset,
@@ -9,6 +15,13 @@ import { normalizeJoinCode, isValidJoinCode } from "../lib/session";
 import { buildCircularArenaPolygon } from "../lib/arena";
 import { generateQrMatrix } from "../lib/qr";
 import { projectToLocalMeters } from "../features/minimap/MinimapSvg";
+import {
+  REJECT_REASON_MESSAGES,
+  formatRejectReason,
+  getTeamBadge,
+  ROLE_INFO,
+} from "../lib/messages";
+import { makeDevEvidence } from "../features/hud/aimingBridge";
 
 describe("useServerClock pure helpers", () => {
   it("computes single-sample clock offset accounting for half RTT", () => {
@@ -108,5 +121,32 @@ describe("wire contract integration in web client", () => {
       payload: { clientSentAt: 1699999999950 },
     });
     expect(pong.success).toBe(true);
+  });
+
+  it("provides a non-empty human-readable message for every RejectReason enum member", () => {
+    for (const reason of RejectReason.options) {
+      const msg = formatRejectReason(reason);
+      expect(typeof msg).toBe("string");
+      expect(msg.length).toBeGreaterThan(5);
+      expect(REJECT_REASON_MESSAGES[reason]).toBeDefined();
+    }
+  });
+
+  it("creates non-color-only team badges and role metadata", () => {
+    const t1 = getTeamBadge("team-1");
+    const t2 = getTeamBadge("team-2");
+    expect(t1?.symbol).not.toBe(t2?.symbol);
+    expect(ROLE_INFO.healer.canHeal).toBe(true);
+    expect(ROLE_INFO.healer.canFire).toBe(false);
+    expect(ROLE_INFO.survivor.canFire).toBe(false);
+    expect(ROLE_INFO.assassin.canFire).toBe(true);
+  });
+
+  it("produces contract-valid AimEvidence from makeDevEvidence", () => {
+    const ev = makeDevEvidence(42);
+    const parsed = AimEvidence.safeParse(ev);
+    expect(parsed.success).toBe(true);
+    expect(ev.source).toBe("dev_simulated");
+    expect(ev.targetMarkerCode).toBe(42);
   });
 });
