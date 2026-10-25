@@ -12,7 +12,7 @@ the shared contract; the web app (Dev B) and aiming/sensors (Dev C) are separate
 | Track | Owns | State |
 |---|---|---|
 | A — Server & rules | `apps/server`, `tools/sim-client` | M0 + lobby slice of M1 |
-| B — Client app & UX | `apps/web`, `tools/mock-server` | not started |
+| B — Client app & UX | `apps/web`, `tools/mock-server` | M0–M6 client app, HUD, mock-server + `/dev/aim-lab` |
 | C — Aiming & platform | `packages/aiming`, `apps/web/features/aiming`, CI, fixtures | M0 platform + aiming core; standalone lab (no real-device results) |
 
 Implemented today: pnpm workspace, the zod contract (`@fantom/shared`), HTTP create/join/summary,
@@ -37,13 +37,13 @@ the server refuses them explicitly instead of pretending they work. See
 ```bash
 pnpm install
 pnpm typecheck        # builds shared packages, then typechecks every package
-pnpm test             # 82 contract, aiming-core, unit and integration tests
+pnpm test             # 96 contract, aiming-core, server, and web unit/integration tests
 cp .env.example .env  # optional; defaults work for localhost
-pnpm dev              # shared types (watch) + server (watch) on :8080
+pnpm dev              # shared types (watch) + server (:8080) + Next.js web app (:3000)
 ```
 
-`pnpm dev` currently starts the server only — the Next.js app arrives with Dev B. The default
-`WEB_BASE_URL` is `http://localhost:3000`, so join URLs/QR codes point at the future web app.
+`pnpm dev` starts both the authoritative game server (`:8080`) and the Next.js web app (`:3000`). The default
+`WEB_BASE_URL` is `http://localhost:3000`, so join URLs/QR codes point at the web app. To develop the web UI standalone against the full-lifecycle mock server (`M1–M6` + golden fixtures), run `pnpm --filter @fantom/mock-server dev:mock`.
 
 ### Test on real phones (HTTPS/WSS)
 
@@ -93,10 +93,16 @@ apps/server/                 # Dev A: HTTP + WebSocket authoritative server
   src/game/                  # service: HTTP actions, lobby message handlers, broadcasts
   src/validation/            # config clamping, display-name sanitizing, zod issue messages
   test/                      # unit + two-client integration tests
+apps/web/                    # Dev B: Next.js 15 App Router mobile web client
+  app/                       # /, /join/[code], /match/[id], and unlinked /dev/aim-lab
+  features/                  # lobby, minimap, combat HUD, results, and aiming seam bridge
+  hooks/                     # useGameSocket, useServerClock, useGeolocation
+  lib/                       # HTTP client, sessionStorage, QR SVG generator, arena builder
 apps/web/features/aiming/dev/ # Dev C: standalone aim-lab spike (not shipped in navigation)
 packages/aiming/             # Dev C: geo/angle helpers and evaluateAim
 packages/shared/             # CONTRACT: zod schemas, types, constants (contract v0.1)
   fixtures/                  # Dev C: generated valid/invalid contract examples
+tools/mock-server/           # Dev B: full-lifecycle contract mock server + fixture loader
 tools/sim-client/            # Dev A: headless bots and integration-test client
 tools/dev-tunnel/            # Dev C: HTTPS/WSS quick tunnels for phone testing
 docs/prompts/                # the three per-developer agent prompts

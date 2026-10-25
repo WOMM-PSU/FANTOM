@@ -34,6 +34,7 @@ export function ActiveMatchHud({
 }: ActiveMatchHudProps) {
   const [, setTick] = useState<number>(0);
   const [selectedDevMarkerCode, setSelectedDevMarkerCode] = useState<number>(2);
+  const [selectedDevTargetPlayerId, setSelectedDevTargetPlayerId] = useState<string>("");
   const [healTargetMarkerCode, setHealTargetMarkerCode] = useState<number>(2);
   const [localHealCooldownUntil, setLocalHealCooldownUntil] = useState<number>(0);
 
@@ -97,9 +98,23 @@ export function ActiveMatchHud({
     onShoot(evidence);
   };
 
+  const visibleOpponents = state.players.filter(
+    (p) => p.id !== self.playerId && p.position !== null
+  );
+  const selectedDevOpponent =
+    visibleOpponents.find((p) => p.id === selectedDevTargetPlayerId) ??
+    visibleOpponents[0] ??
+    null;
+
   const handleDevShoot = () => {
     if (!state.config.devMode || fireDisabledReason) return;
-    onShoot(makeDevEvidence(selectedDevMarkerCode));
+    onShoot(
+      makeDevEvidence(
+        selectedDevMarkerCode,
+        selfPlayer?.position ?? null,
+        selectedDevOpponent?.position ?? null
+      )
+    );
   };
 
   const handleHealAction = () => {
@@ -667,28 +682,54 @@ export function ActiveMatchHud({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
+                  flexWrap: "wrap",
                   gap: 8,
                 }}
               >
-                <label style={{ fontSize: 12, fontWeight: 700, color: "#fde68a" }}>
-                  [DEV_ONLY] Target Marker Code:
-                  <input
-                    type="number"
-                    min={0}
-                    max={255}
-                    value={selectedDevMarkerCode}
-                    onChange={(e) => setSelectedDevMarkerCode(Number(e.target.value))}
-                    style={{
-                      marginLeft: 8,
-                      width: 64,
-                      padding: "4px 8px",
-                      borderRadius: 6,
-                      border: "1px solid #f59e0b",
-                      background: "#090d16",
-                      color: "#f8fafc",
-                    }}
-                  />
-                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#fde68a" }}>
+                    [DEV_ONLY] Target Marker Code:
+                    <input
+                      type="number"
+                      min={0}
+                      max={255}
+                      value={selectedDevMarkerCode}
+                      onChange={(e) => setSelectedDevMarkerCode(Number(e.target.value))}
+                      style={{
+                        marginLeft: 8,
+                        width: 64,
+                        padding: "4px 8px",
+                        borderRadius: 6,
+                        border: "1px solid #f59e0b",
+                        background: "#090d16",
+                        color: "#f8fafc",
+                      }}
+                    />
+                  </label>
+                  {visibleOpponents.length > 0 && (
+                    <label style={{ fontSize: 12, fontWeight: 700, color: "#fde68a" }}>
+                      Align GPS Bearing:
+                      <select
+                        value={selectedDevOpponent?.id ?? ""}
+                        onChange={(e) => setSelectedDevTargetPlayerId(e.target.value)}
+                        style={{
+                          marginLeft: 6,
+                          padding: "4px 8px",
+                          borderRadius: 6,
+                          border: "1px solid #f59e0b",
+                          background: "#090d16",
+                          color: "#f8fafc",
+                        }}
+                      >
+                        {visibleOpponents.map((op) => (
+                          <option key={op.id} value={op.id}>
+                            {op.displayName}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
                 <button
                   type="button"
                   disabled={Boolean(fireDisabledReason)}

@@ -82,19 +82,22 @@ One section per developer. Keep it current at the end of every session:
   - Unit tests in `apps/web/test/clock-and-session.test.ts` (12 tests covering clock offset math, countdown clamping, join-code validation, 24-gon arena builder, QR matrix generation, local-meters minimap projection, exhaustive `RejectReason` human-readable messages, team/role badges, and `makeDevEvidence`).
 - **M2–M6 Client App & HUD (`apps/web` & `tools/mock-server`):**
   - `useGeolocation` hook (`watchPosition`, 1–2 Hz throttling, active during `countdown`/`active` phases), 24-sided circular arena builder (`lib/arena.ts`), local-meters SVG minimap (`features/minimap/MinimapSvg.tsx`), countdown safety screen, and results view (`features/results/ResultsView.tsx`).
-  - `features/hud/aimingBridge.tsx`: Seam B↔C surface (`PlayerMarker`, `AimView`, `useAiming`, `makeDevEvidence`) with real browser camera/orientation permission checks, iOS `DeviceOrientationEvent.requestPermission()` gesture flow, track cleanup on unmount, and `AimUnavailableReason` recovery UI.
+  - `features/hud/aimingBridge.tsx`: Seam B↔C surface (`PlayerMarker`, `AimView`, `useAiming`, `makeDevEvidence`, `buildFantomMarkerPayload`, `parseFantomMarkerPayload`) with real browser camera/orientation permission checks, iOS `DeviceOrientationEvent.requestPermission()` gesture flow, native `BarcodeDetector` `FANTOM:1:<code>:<checksum>` QR marker scanning, track cleanup on unmount, and `AimUnavailableReason` recovery UI. `makeDevEvidence(targetMarkerCode, shooterPos?, targetPos?)` computes matching GPS `headingDeg` and `estimatedDistanceM` when positions are known so `DEV_ONLY` simulated shots pass `evaluateAim` bearing/range checks.
+  - `app/dev/aim-lab/page.tsx`: Unlinked `/dev/aim-lab` developer testbench inside the Next.js app (unblocking Dev C's single-origin phone posture & marker check over `pnpm dev:tunnel`).
+  - `tools/mock-server/src/fixtures.ts`: Golden fixture loader (`GET /api/fixtures` and `GET /api/fixtures/:scenario`) validating and serving all 7 canonical `MATCH_STATE` fixtures (`lobby`, `countdown`, `active-ffa`, `out-of-zone`, `assassin-hidden`, `team-deathmatch`, `finished`) from `packages/shared/fixtures/server/`.
   - `features/hud/ActiveMatchHud.tsx`: Mode-aware HUD (`ffa`, `assassin`, `team_deathmatch`) with non-color-only team indicators (`getTeamBadge`), Assassin/Survivor objective banners, Healer action kit (`REQUEST_HEAL` + 5s cooldown), arena pickup collection panel (`REQUEST_PICKUP`), weapon variants (`Pulse`, `Ravager`, `Viper`), and server-clock synced timers.
-- Verified locally: `pnpm typecheck` green across all workspace packages, `pnpm test` green (38 tests across server + web), and `pnpm --filter @fantom/web build:web` production Next.js build green.
+- Verified locally: `pnpm install --frozen-lockfile` green, `pnpm typecheck` green across all workspace packages, `pnpm test` green (96 tests across shared, aiming, server, and web), and `pnpm --filter @fantom/web build:web` production Next.js build green.
 
 ### In progress
 
-- End-to-end two-phone lobby verification over HTTPS tunnel once Dev C's `pnpm dev:tunnel` lands.
-- Wiring M2 lifecycle & positioning against `apps/server` once Dev A's M2 handlers (`REQUEST_MATCH_START`, `UPDATE_LOCATION`) land.
+- End-to-end two-phone lobby and `/dev/aim-lab` verification over `pnpm dev:tunnel` on physical phones.
+- Wiring M2–M6 lifecycle & combat against `apps/server` once Dev A's server handlers (`REQUEST_MATCH_START`, `UPDATE_LOCATION`, `REQUEST_SHOT`, `REQUEST_HEAL`, `REQUEST_PICKUP`) land.
 
 ### Blocked on
 
-- **Dev C:** `pnpm dev:tunnel` (M0) for two-phone HTTPS QR join verification, and `apps/web/features/aiming` (`AimView`, `PlayerMarker`, `useAiming`, `makeDevEvidence`) for M3/M4 camera aiming integration.
-- **Dev A:** M2 server handlers (`REQUEST_MATCH_START`, `UPDATE_LOCATION`) to test countdown, arena boundary, and active match transitions against the real server (currently tested against `tools/mock-server`).
+- **Human / Physical Phones:** Two physical phones over `pnpm dev:tunnel` to record real-device lobby QR join and `/dev/aim-lab` posture observations in `docs/testing.md`.
+- **Dev C:** Production `apps/web/features/aiming/index.ts` exports (`AimView`, `PlayerMarker`, `useAiming`, `makeDevEvidence`) once physical posture testing selects the final marker codec.
+- **Dev A:** M2–M6 server handlers (`REQUEST_MATCH_START`, `UPDATE_LOCATION`, `REQUEST_SHOT`, `REQUEST_HEAL`, `REQUEST_PICKUP`) in `apps/server` (currently tested against `tools/mock-server` and golden fixtures).
 
 ### Contract change requests
 
@@ -102,8 +105,8 @@ One section per developer. Keep it current at the end of every session:
 
 ### Known issues / limitations
 
-- Verified via automated unit tests, `tsc`, and `next build` on desktop; real two-phone QR join verification over HTTPS is pending `pnpm dev:tunnel`.
-- In `ActiveMatchHud.tsx`, the camera aiming viewport currently renders a placeholder slot and a `[DEV_ONLY]` simulated target picker (only shown when `config.devMode === true`) until Dev C delivers `apps/web/features/aiming`.
+- Verified via automated unit tests, golden fixtures, `tsc`, and `next build` on desktop; real two-phone QR join verification over `pnpm dev:tunnel` requires physical phone testing.
+- `apps/web/features/hud/aimingBridge.tsx` provides a working Seam B↔C implementation (including native `BarcodeDetector` `FANTOM:1:<code>:<checksum>` scanning and GPS-aligned `makeDevEvidence`) inside `features/hud/` until Dev C delivers `apps/web/features/aiming/index.ts`.
 
 ## Dev C — Aiming, sensors & platform
 

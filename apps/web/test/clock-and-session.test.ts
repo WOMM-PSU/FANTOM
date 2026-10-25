@@ -21,7 +21,15 @@ import {
   getTeamBadge,
   ROLE_INFO,
 } from "../lib/messages";
-import { makeDevEvidence } from "../features/hud/aimingBridge";
+import {
+  makeDevEvidence,
+  buildFantomMarkerPayload,
+  parseFantomMarkerPayload,
+} from "../features/hud/aimingBridge";
+import {
+  MOCK_FIXTURE_SCENARIOS,
+  loadAllFixtureMatchStates,
+} from "../../../tools/mock-server/src/fixtures";
 
 describe("useServerClock pure helpers", () => {
   it("computes single-sample clock offset accounting for half RTT", () => {
@@ -142,11 +150,44 @@ describe("wire contract integration in web client", () => {
     expect(ROLE_INFO.assassin.canFire).toBe(true);
   });
 
-  it("produces contract-valid AimEvidence from makeDevEvidence", () => {
+  it("produces contract-valid AimEvidence from makeDevEvidence with optional GPS bearing alignment", () => {
     const ev = makeDevEvidence(42);
     const parsed = AimEvidence.safeParse(ev);
     expect(parsed.success).toBe(true);
     expect(ev.source).toBe("dev_simulated");
     expect(ev.targetMarkerCode).toBe(42);
+
+    // Target due East of shooter -> bearing ~90 degrees, distance ~10-15m
+    const shooter = { lat: 40.7982, lng: -77.8599 };
+    const targetEast = { lat: 40.7982, lng: -77.85975 };
+    const aligned = makeDevEvidence(7, shooter, targetEast);
+    expect(AimEvidence.safeParse(aligned).success).toBe(true);
+    expect(aligned.camera.headingDeg).toBeGreaterThan(88);
+    expect(aligned.camera.headingDeg).toBeLessThan(92);
+    expect(aligned.estimatedDistanceM).toBeGreaterThan(10);
+    expect(aligned.estimatedDistanceM).toBeLessThan(15);
+  });
+
+  it("encodes and verifies FANTOM:1:<code>:<checksum> QR marker payloads", () => {
+    const payload = buildFantomMarkerPayload(7);
+    expect(payload).toBe("FANTOM:1:7:0e");
+    const parsed = parseFantomMarkerPayload(payload);
+    expect(parsed).toEqual({ valid: true, code: 7, reason: null });
+
+    expect(parseFantomMarkerPayload("FANTOM:1:7:ff").valid).toBe(false);
+    expect(parseFantomMarkerPayload("FANTOM:1:999:0e").valid).toBe(false);
+  });
+
+  it("loads and validates all 7 golden MATCH_STATE fixtures in mock-server", () => {
+    const fixtures = loadAllFixtureMatchStates();
+    expect(Object.keys(fixtures)).toHaveLength(MOCK_FIXTURE_SCENARIOS.length);
+    expect(fixtures.lobby.phase).toBe("lobby");
+    expect(fixtures.countdown.phase).toBe("countdown");
+    expect(fixtures["active-ffa"].phase).toBe("active");
+    expect(fixtures["out-of-zone"].self.inZone).toBe(false);
+    expect(fixtures["assassin-hidden"].config.mode).toBe("assassin");
+    expect(fixtures["team-deathmatch"].config.mode).toBe("team_deathmatch");
+    expect(fixtures.finished.phase).toBe("finished");
+    expect(fixtures.finished.result).not.toBeNull();
   });
 });

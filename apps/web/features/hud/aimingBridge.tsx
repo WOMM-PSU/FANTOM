@@ -6,7 +6,7 @@
  * Once Dev C merges `apps/web/features/aiming/index.ts`, re-export from `@/features/aiming`.
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import type { AimEvidence } from "@fantom/shared";
+import type { AimEvidence, LatLng } from "@fantom/shared";
 import { AIM_UNAVAILABLE_INFO, type AimUnavailableReason } from "@/lib/messages";
 
 export type AimController = {
@@ -19,24 +19,103 @@ export type AimController = {
   captureEvidence(): AimEvidence | null;
 };
 
+const EARTH_RADIUS_M = 6_371_008.8;
+
+function computeGpsBearingAndDistance(
+  from: LatLng,
+  to: LatLng
+): { headingDeg: number; distanceM: number } | null {
+  if (
+    !Number.isFinite(from.lat) ||
+    !Number.isFinite(from.lng) ||
+    !Number.isFinite(to.lat) ||
+    !Number.isFinite(to.lng)
+  ) {
+    return null;
+  }
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const lat1 = toRad(from.lat);
+  const lat2 = toRad(to.lat);
+  const dLat = toRad(to.lat - from.lat);
+  const dLng = toRad(to.lng - from.lng);
+
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h = Math.min(
+    1,
+    Math.max(0, sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng)
+  );
+  const distanceM = 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
+  if (!Number.isFinite(distanceM) || distanceM <= 0.001) {
+    return null;
+  }
+
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  const headingDeg = ((toDeg(Math.atan2(y, x)) % 360) + 360) % 360;
+  return { headingDeg, distanceM };
+}
+
+export function buildFantomMarkerChecksum(code: number): string {
+  const clamped = Math.max(0, Math.min(255, Math.floor(code)));
+  return ((clamped * 37 + 11) & 0xff).toString(16).padStart(2, "0");
+}
+
+export function buildFantomMarkerPayload(code: number): string {
+  const clamped = Math.max(0, Math.min(255, Math.floor(code)));
+  return `FANTOM:1:${clamped}:${buildFantomMarkerChecksum(clamped)}`;
+}
+
+export function parseFantomMarkerPayload(rawValue: string): {
+  valid: boolean;
+  code: number | null;
+  reason: string | null;
+} {
+  const match = /^FANTOM:1:(\d{1,3}):([0-9a-f]{2})$/i.exec((rawValue ?? "").trim());
+  if (!match || !match[1] || !match[2]) {
+    return { valid: false, code: null, reason: "not a FANTOM marker payload" };
+  }
+  const code = Number(match[1]);
+  if (!Number.isInteger(code) || code < 0 || code > 255) {
+    return { valid: false, code: null, reason: "marker code outside 0-255" };
+  }
+  const expected = buildFantomMarkerChecksum(code);
+  if (match[2].toLowerCase() !== expected) {
+    return { valid: false, code: null, reason: "marker checksum mismatch" };
+  }
+  return { valid: true, code, reason: null };
+}
+
 /**
  * DEV_ONLY — builds simulated evidence; usable only when config.devMode === true (PLAN.md P5.3).
+ * When `shooterPos` and `targetPos` are supplied, populates `camera.headingDeg` and
+ * `estimatedDistanceM` with the true GPS bearing and distance so `evaluateAim` agreement checks pass.
  */
-export function makeDevEvidence(targetMarkerCode: number): AimEvidence {
+export function makeDevEvidence(
+  targetMarkerCode: number,
+  shooterPos?: LatLng | null,
+  targetPos?: LatLng | null
+): AimEvidence {
+  const clampedCode = Math.max(0, Math.min(255, Math.floor(targetMarkerCode)));
+  const geo =
+    shooterPos && targetPos ? computeGpsBearingAndDistance(shooterPos, targetPos) : null;
+
   return {
     source: "dev_simulated",
     ageMs: 15,
-    targetMarkerCode: Math.max(0, Math.min(255, Math.floor(targetMarkerCode))),
-    visibleMarkerCodes: [Math.max(0, Math.min(255, Math.floor(targetMarkerCode)))],
+    targetMarkerCode: clampedCode,
+    visibleMarkerCodes: [clampedCode],
     markerConfidence: 0.96,
     markerVisibleFraction: 1,
     markerOffsetDeg: { x: 0, y: 0 },
     markerWidthPx: 140,
     frameWidthPx: 1280,
     hfovDeg: 65,
-    estimatedDistanceM: 8,
+    estimatedDistanceM: geo ? Math.max(0.5, Math.min(29, Number(geo.distanceM.toFixed(2)))) : 8,
     camera: {
-      headingDeg: 0,
+      headingDeg: geo ? Number(geo.headingDeg.toFixed(2)) : 0,
       pitchDeg: 0,
       rollDeg: 0,
       headingAccuracyDeg: 5,
@@ -322,6 +401,17 @@ export function useAiming(opts: {
     pitchDeg: 0,
     rollDeg: 0,
   });
+  const lastObservationRef = useRef<{
+    targetMarkerCode: number;
+    visibleMarkerCodes: number[];
+    confidence: number;
+    markerOffsetDeg: { x: number; y: number };
+    markerWidthPx: number;
+    frameWidthPx: number;
+    hfovDeg: number;
+    estimatedDistanceM: number | null;
+    observedAtMs: number;
+  } | null>(null);
 
   const stop = useCallback(() => {
     if (streamRef.current) {
@@ -403,18 +493,20 @@ export function useAiming(opts: {
 
   const captureEvidence = useCallback((): AimEvidence | null => {
     if (!target) return null;
+    const obs = lastObservationRef.current;
+    const ageMs = obs ? Math.max(1, Math.round(performance.now() - obs.observedAtMs)) : 25;
     return {
       source: "camera",
-      ageMs: 25,
+      ageMs,
       targetMarkerCode: target.markerCode,
-      visibleMarkerCodes: [target.markerCode],
+      visibleMarkerCodes: obs?.visibleMarkerCodes ?? [target.markerCode],
       markerConfidence: target.confidence,
       markerVisibleFraction: 0.95,
-      markerOffsetDeg: { x: 0, y: 0 },
-      markerWidthPx: 110,
-      frameWidthPx: 1280,
-      hfovDeg: 65,
-      estimatedDistanceM: 8,
+      markerOffsetDeg: obs?.markerOffsetDeg ?? { x: 0, y: 0 },
+      markerWidthPx: obs?.markerWidthPx ?? 110,
+      frameWidthPx: obs?.frameWidthPx ?? 1280,
+      hfovDeg: obs?.hfovDeg ?? 60,
+      estimatedDistanceM: obs ? obs.estimatedDistanceM : 8,
       camera: {
         headingDeg: headingRef.current.headingDeg,
         pitchDeg: headingRef.current.pitchDeg,
@@ -424,6 +516,105 @@ export function useAiming(opts: {
       },
     };
   }, [target]);
+
+  // Run native BarcodeDetector (when supported) at 10 Hz while camera is ready
+  useEffect(() => {
+    if (status !== "ready" || typeof window === "undefined") return;
+    const BarcodeDetectorCtor = (
+      window as unknown as {
+        BarcodeDetector?: new (opts: { formats: string[] }) => {
+          detect(source: HTMLVideoElement): Promise<
+            Array<{
+              rawValue?: string;
+              boundingBox?: { x: number; y: number; width: number; height: number };
+            }>
+          >;
+        };
+      }
+    ).BarcodeDetector;
+
+    if (!BarcodeDetectorCtor) return;
+    let detector: InstanceType<typeof BarcodeDetectorCtor> | null = null;
+    try {
+      detector = new BarcodeDetectorCtor({ formats: ["qr_code"] });
+    } catch {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setInterval(() => {
+      const video = videoRef.current;
+      if (cancelled || !detector || !video || !video.videoWidth || !video.videoHeight) return;
+      void detector
+        .detect(video)
+        .then((rawList) => {
+          if (cancelled) return;
+          const validCodes: number[] = [];
+          let primaryBox: { x: number; y: number; width: number; height: number } | undefined;
+          let primaryCode: number | null = null;
+
+          for (const item of rawList) {
+            const parsed = parseFantomMarkerPayload(item.rawValue ?? "");
+            if (parsed.valid && parsed.code !== null) {
+              validCodes.push(parsed.code);
+              if (primaryCode === null) {
+                primaryCode = parsed.code;
+                primaryBox = item.boundingBox;
+              }
+            }
+          }
+
+          if (primaryCode !== null) {
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            const hfovDeg = 60;
+            const vfovDeg =
+              (2 * Math.atan(Math.tan((hfovDeg * Math.PI) / 360) * (vh / vw)) * 180) / Math.PI;
+            const focalPx = vw / 2 / Math.tan((hfovDeg * Math.PI) / 360);
+            const bw = primaryBox?.width ?? 110;
+            const bh = primaryBox?.height ?? 110;
+            const cx = (primaryBox?.x ?? vw / 2 - bw / 2) + bw / 2;
+            const cy = (primaryBox?.y ?? vh / 2 - bh / 2) + bh / 2;
+            const offsetX = ((cx - vw / 2) / vw) * hfovDeg;
+            const offsetY = ((vh / 2 - cy) / vh) * vfovDeg;
+            const estDist = bw > 0 ? (focalPx * 0.065) / bw : null;
+
+            lastObservationRef.current = {
+              targetMarkerCode: primaryCode,
+              visibleMarkerCodes: validCodes,
+              confidence: 0.9,
+              markerOffsetDeg: {
+                x: Number(offsetX.toFixed(2)),
+                y: Number(offsetY.toFixed(2)),
+              },
+              markerWidthPx: Math.max(1, Math.round(bw)),
+              frameWidthPx: vw,
+              hfovDeg,
+              estimatedDistanceM:
+                estDist !== null && Number.isFinite(estDist)
+                  ? Number(estDist.toFixed(2))
+                  : null,
+              observedAtMs: performance.now(),
+            };
+            setTarget({ markerCode: primaryCode, confidence: 0.9 });
+          } else if (
+            lastObservationRef.current &&
+            performance.now() - lastObservationRef.current.observedAtMs > 500
+          ) {
+            lastObservationRef.current = null;
+            setTarget(null);
+          }
+        })
+        .catch(() => {
+          // Ignore transient frame detection errors
+        });
+    }, 100);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [status]);
 
   // Listen to deviceorientation while ready
   useEffect(() => {

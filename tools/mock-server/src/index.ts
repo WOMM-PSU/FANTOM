@@ -32,6 +32,11 @@ import {
   HEAL,
   HEALTH_PACK_AMOUNT,
 } from "@fantom/shared";
+import {
+  MOCK_FIXTURE_SCENARIOS,
+  isMockFixtureScenario,
+  loadFixtureMatchState,
+} from "./fixtures.js";
 
 const PORT = Number(process.env.MOCK_PORT ?? process.env.PORT ?? 8080);
 const WEB_BASE_URL = process.env.WEB_BASE_URL ?? "http://localhost:3000";
@@ -309,6 +314,22 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && pathname === "/health") {
     sendJson(res, 200, { ok: true, protocolVersion: PROTOCOL_VERSION });
+    return;
+  }
+
+  if (req.method === "GET" && pathname === "/api/fixtures") {
+    sendJson(res, 200, { scenarios: MOCK_FIXTURE_SCENARIOS });
+    return;
+  }
+
+  const fixtureRoute = pathname.match(/^\/api\/fixtures\/([a-z-]+)$/);
+  if (req.method === "GET" && fixtureRoute) {
+    const scenario = fixtureRoute[1] ?? "";
+    if (!isMockFixtureScenario(scenario)) {
+      sendApiError(res, 404, "BAD_MESSAGE", `Unknown fixture scenario: ${scenario}`);
+      return;
+    }
+    sendJson(res, 200, loadFixtureMatchState(scenario));
     return;
   }
 
