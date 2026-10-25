@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "seq": 11,
+  "serverTime": 1760000000000,
+  "type": "SHOT_REJECTED",
+  "payload": {
+    "reason": "NOT_A_REASON"
+  },
+  "replyTo": "c-shot-camera-1"
+}

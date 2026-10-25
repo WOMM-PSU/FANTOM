@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "seq": 16,
+  "serverTime": 1760000000000,
+  "type": "PICKUP_COLLECTED",
+  "payload": {
+    "pickupId": "pickup-1",
+    "byPlayerId": "p1",
+    "kind": "weapon"
+  }
+}

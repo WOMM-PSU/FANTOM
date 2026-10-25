@@ -1,0 +1,8 @@
+{
+  "joinCode": "ABCDE",
+  "phase": "lobby",
+  "mode": "ffa",
+  "playerCount": 2,
+  "maxPlayers": 16,
+  "joinable": true
+}

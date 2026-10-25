@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "seq": 13,
+  "serverTime": 1760000000000,
+  "type": "PLAYER_ELIMINATED",
+  "payload": {
+    "playerId": "p2",
+    "byPlayerId": "p1",
+    "cause": "shot"
+  }
+}

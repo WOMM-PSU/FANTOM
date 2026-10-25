@@ -1,0 +1,103 @@
+{
+  "v": 1,
+  "seq": 3,
+  "serverTime": 1760000000000,
+  "type": "MATCH_STATE",
+  "payload": {
+    "matchId": "match-1",
+    "joinCode": "ABCDE",
+    "phase": "countdown",
+    "hostPlayerId": "p1",
+    "config": {
+      "mode": "ffa",
+      "durationSec": 300,
+      "arena": {
+        "polygon": [
+          {
+            "lat": 47.6205,
+            "lng": -122.3493
+          },
+          {
+            "lat": 47.6205,
+            "lng": -122.3483
+          },
+          {
+            "lat": 47.6195,
+            "lng": -122.3483
+          },
+          {
+            "lat": 47.6195,
+            "lng": -122.3493
+          }
+        ],
+        "boundaryMarginM": 5
+      },
+      "minimap": {
+        "enabled": true,
+        "showAllies": true,
+        "showEnemies": false,
+        "showPickups": true
+      },
+      "pickups": {
+        "weapons": true,
+        "health": true,
+        "shields": true,
+        "respawnSec": 30
+      },
+      "team": {
+        "teamCount": 2,
+        "killersPerHealer": 2
+      },
+      "spawnLockoutSec": 5,
+      "maxRangeM": 30,
+      "devMode": false
+    },
+    "players": [
+      {
+        "id": "p1",
+        "displayName": "Ada",
+        "teamId": null,
+        "role": null,
+        "status": "alive",
+        "connected": true,
+        "ready": true,
+        "healthFraction": 1,
+        "score": 0,
+        "position": null
+      },
+      {
+        "id": "p2",
+        "displayName": "Babbage",
+        "teamId": null,
+        "role": null,
+        "status": "alive",
+        "connected": true,
+        "ready": true,
+        "healthFraction": 1,
+        "score": 0,
+        "position": null
+      }
+    ],
+    "self": {
+      "playerId": "p1",
+      "markerCode": 7,
+      "health": 100,
+      "maxHealth": 100,
+      "shield": 0,
+      "weaponId": null,
+      "ammo": 0,
+      "nextShotAt": 0,
+      "reloadCompleteAt": null,
+      "spawnLockedUntil": 1760000005000,
+      "locationQuality": "good",
+      "inZone": true,
+      "returnGraceUntil": null
+    },
+    "pickups": [],
+    "teamScores": {},
+    "countdownEndsAt": 1760000005000,
+    "startedAt": null,
+    "endsAt": null,
+    "result": null
+  }
+}

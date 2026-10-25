@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "id": "c-pickup-1",
+  "type": "REQUEST_PICKUP",
+  "payload": {
+    "pickupId": "pickup-1"
+  }
+}

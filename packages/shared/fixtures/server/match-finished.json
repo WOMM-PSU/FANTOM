@@ -1,0 +1,37 @@
+{
+  "v": 1,
+  "seq": 18,
+  "serverTime": 1760000000000,
+  "type": "MATCH_FINISHED",
+  "payload": {
+    "result": {
+      "winner": {
+        "kind": "player",
+        "playerId": "p1"
+      },
+      "endedReason": "last_standing",
+      "standings": [
+        {
+          "playerId": "p1",
+          "displayName": "Ada",
+          "teamId": null,
+          "role": null,
+          "eliminations": 2,
+          "deaths": 0,
+          "score": 2,
+          "survived": true
+        },
+        {
+          "playerId": "p2",
+          "displayName": "Babbage",
+          "teamId": null,
+          "role": null,
+          "eliminations": 1,
+          "deaths": 1,
+          "score": 1,
+          "survived": false
+        }
+      ]
+    }
+  }
+}

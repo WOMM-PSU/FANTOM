@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "seq": 14,
+  "serverTime": 1760000000000,
+  "type": "HEAL_APPLIED",
+  "payload": {
+    "healerId": "p3",
+    "targetId": "p1",
+    "amount": 25
+  }
+}
