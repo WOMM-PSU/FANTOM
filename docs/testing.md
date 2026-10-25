@@ -56,7 +56,8 @@ Ran the real Next.js app and game server through two quick tunnels with
 | Create match through the API tunnel | **201**; join code `S7SB4` and join URL rendered |
 | WebSocket handshake over `wss://` | Opened; server sent `WELCOME` with a player ID |
 | Lobby render | Host, player count, settings and start requirements rendered |
-| Stable socket | **Failed.** `useGameSocket` reconnects continuously because `useServerClock` returns a new `clock` object each render. Each cycle has one failed socket and one that opens, receives `WELCOME`, then is torn down by the effect cleanup. B-owned; not fixed here. |
+| Stable socket | **Fixed and verified.** The initial run looped because `useGameSocket` depended on the `clock` object, which `useServerClock` recreates each render. Depending only on the stable `recordPong`/`recordEnvelopeTime` callbacks stopped the loop. |
+| Two-client lobby | Normal browser tab hosted, incognito tab joined via `/join/S7SB4`; both showed **2 / 16** players and no reconnect banner. Desktop tabs, not phones. |
 
 Reproduce the transport check without the app:
 

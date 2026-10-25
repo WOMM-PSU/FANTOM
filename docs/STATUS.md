@@ -104,11 +104,12 @@ One section per developer. Keep it current at the end of every session:
 
 - Verified via automated unit tests, `tsc`, and `next build` on desktop; real two-phone QR join verification over HTTPS is pending `pnpm dev:tunnel`.
 - In `ActiveMatchHud.tsx`, the camera aiming viewport currently renders a placeholder slot and a `[DEV_ONLY]` simulated target picker (only shown when `config.devMode === true`) until Dev C delivers `apps/web/features/aiming`.
-- **Cross-track integration note (Dev C, 2026-10-24):** a full-stack tunnel run exposed a WebSocket
-  reconnect loop. `useGameSocket` depends on the `clock` object, while `useServerClock` returns a
-  new object on every render; the first `WELCOME` renders the lobby, then the effect closes and
-  reopens the socket. B-owned fix: memoize the clock controller or read it through a ref inside
-  `useGameSocket`. Not changed here to respect file ownership.
+- **Cross-track integration fix (Dev C, 2026-10-24):** a full-stack tunnel run exposed a WebSocket
+  reconnect loop. `useGameSocket` depended on the `clock` object, while `useServerClock` returns a
+  new object on every render. Fixed by depending only on the stable `recordPong` and
+  `recordEnvelopeTime` callbacks. Verified with two desktop browser clients over HTTPS/WSS; both
+  showed 2/16 players and no reconnect banner. This is an integration bug fix in B-owned code, not
+  a feature change; B should review it.
 
 ## Dev C — Aiming, sensors & platform
 
@@ -155,9 +156,9 @@ One section per developer. Keep it current at the end of every session:
   code for `WEB_PATH=/aim-lab.html`, and that HTTPS URL returned 200. **No phone camera has scanned
   the  QR code**, and no real phone or real camera result is claimed.
 - **Post-merge full-stack check:** Next.js home and match routes over HTTPS returned 200,
-  `POST /api/matches` returned 201, the WSS handshake returned `WELCOME`, and the lobby rendered.
-  The check also found the B-owned reconnect loop recorded in `docs/testing.md`. Desktop only; no
-  phone result.
+  `POST /api/matches` returned 201, and the WSS handshake returned `WELCOME`. After fixing the
+  clock dependency, two desktop browser clients joined the same match and both rendered 2/16
+  players with no reconnect banner. Desktop only; no phone result.
 
 ### In progress
 

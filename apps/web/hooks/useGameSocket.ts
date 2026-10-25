@@ -56,6 +56,8 @@ export function useGameSocket(
   sessionToken: string | null,
   clock: ServerClockController
 ): UseGameSocketResult {
+  // Only these callbacks are stable; the clock object itself is recreated every render.
+  const { recordPong, recordEnvelopeTime } = clock;
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const [matchState, setMatchState] = useState<MatchState | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -182,7 +184,7 @@ export function useGameSocket(
       }
 
       const msg: ServerMessageType = parsed.data;
-      clock.recordEnvelopeTime(msg.serverTime);
+      recordEnvelopeTime(msg.serverTime);
 
       switch (msg.type) {
         case "WELCOME": {
@@ -199,7 +201,7 @@ export function useGameSocket(
           break;
         }
         case "PONG": {
-          clock.recordPong(msg.payload.clientSentAt, msg.serverTime);
+          recordPong(msg.payload.clientSentAt, msg.serverTime);
           break;
         }
         case "SHOT_ACCEPTED": {
@@ -313,7 +315,7 @@ export function useGameSocket(
       ws.onclose = null;
       ws.close();
     };
-  }, [sessionToken, reconnectTrigger, clock]);
+  }, [sessionToken, reconnectTrigger, recordEnvelopeTime, recordPong]);
 
   return {
     status,
