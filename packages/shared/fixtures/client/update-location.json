@@ -1,0 +1,13 @@
+{
+  "v": 1,
+  "id": "c-location-1",
+  "type": "UPDATE_LOCATION",
+  "payload": {
+    "position": {
+      "lat": 47.6201,
+      "lng": -122.3491
+    },
+    "accuracyM": 8,
+    "clientTimestamp": 1760000000000
+  }
+}

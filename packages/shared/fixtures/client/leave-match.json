@@ -1,0 +1,6 @@
+{
+  "v": 1,
+  "id": "c-leave-1",
+  "type": "LEAVE_MATCH",
+  "payload": {}
+}

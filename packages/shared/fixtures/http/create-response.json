@@ -1,0 +1,7 @@
+{
+  "matchId": "match-1",
+  "joinCode": "ABCDE",
+  "joinUrl": "https://fantom.example/join/ABCDE",
+  "playerId": "p1",
+  "sessionToken": "fixture-session-token-0000000001"
+}

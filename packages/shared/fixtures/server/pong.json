@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "seq": 9,
+  "serverTime": 1760000000000,
+  "type": "PONG",
+  "payload": {
+    "clientSentAt": 1759999999000
+  },
+  "replyTo": "c-ping-1"
+}

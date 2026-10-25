@@ -13,32 +13,57 @@ the shared contract; the web app (Dev B) and aiming/sensors (Dev C) are separate
 |---|---|---|
 | A — Server & rules | `apps/server`, `tools/sim-client` | M0 + lobby slice of M1 |
 | B — Client app & UX | `apps/web`, `tools/mock-server` | not started |
-| C — Aiming & platform | `packages/aiming`, `apps/web/features/aiming`, CI, fixtures | not started |
+| C — Aiming & platform | `packages/aiming`, `apps/web/features/aiming`, CI, fixtures | M0 platform + aiming core; standalone lab (no real-device results) |
 
 Implemented today: pnpm workspace, the zod contract (`@fantom/shared`), HTTP create/join/summary,
 the WebSocket `HELLO`/`WELCOME`/`PING`/`PONG` handshake, per-recipient `MATCH_STATE` snapshots,
 ready state, host settings with server-side clamping, leave, reconnect rebinding, and the headless
-`sim-client`. Match start, location updates, shots, heals and pickups are **not implemented yet**;
+`sim-client`. The C track adds the pure geo/angle helpers, `evaluateAim`, every contract fixture
+plus its test, a standalone camera/marker lab, and `pnpm dev:tunnel` for HTTPS/WSS phone testing.
+Match start, location updates, shots, heals and pickups are **not implemented on the server yet**;
 the server refuses them explicitly instead of pretending they work. See
 [docs/STATUS.md](docs/STATUS.md).
 
 ## Requirements
 
 - Node.js ≥ 20.11 (verified on Node 24)
-- pnpm 11
+- pnpm 12 (CI pins 12.15.0)
+- [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
+  for real-phone testing over HTTPS/WSS (not needed for localhost)
+
 
 ## Quickstart
 
 ```bash
 pnpm install
 pnpm typecheck        # builds shared packages, then typechecks every package
-pnpm test             # 26 unit + two-client integration tests
+pnpm test             # 82 contract, aiming-core, unit and integration tests
 cp .env.example .env  # optional; defaults work for localhost
 pnpm dev              # shared types (watch) + server (watch) on :8080
 ```
 
 `pnpm dev` currently starts the server only — the Next.js app arrives with Dev B. The default
 `WEB_BASE_URL` is `http://localhost:3000`, so join URLs/QR codes point at the future web app.
+
+### Test on real phones (HTTPS/WSS)
+
+Camera, orientation and geolocation need a secure context. With `cloudflared` on `PATH` (or
+`CLOUDFLARED_BIN=./.tools/cloudflared/cloudflared`):
+
+```bash
+pnpm dev:tunnel
+```
+
+It prints a **Web** URL, a scannable QR code, and the API/WS URLs used by the app. `WEB_PATH`
+chooses the page the QR code opens (default `/`). The tunnels are public while the process runs and
+are **not** a deployment. See [tools/dev-tunnel/README.md](tools/dev-tunnel/README.md).
+
+Until the web app exists, expose the standalone aim lab instead:
+
+```bash
+WEB_PORT=4173 WEB_PATH=/aim-lab.html START_APP=false \
+  CLOUDFLARED_BIN=./.tools/cloudflared/cloudflared pnpm dev:tunnel
+```
 
 ### Drive the lobby without a UI
 
@@ -68,8 +93,12 @@ apps/server/                 # Dev A: HTTP + WebSocket authoritative server
   src/game/                  # service: HTTP actions, lobby message handlers, broadcasts
   src/validation/            # config clamping, display-name sanitizing, zod issue messages
   test/                      # unit + two-client integration tests
+apps/web/features/aiming/dev/ # Dev C: standalone aim-lab spike (not shipped in navigation)
+packages/aiming/             # Dev C: geo/angle helpers and evaluateAim
 packages/shared/             # CONTRACT: zod schemas, types, constants (contract v0.1)
+  fixtures/                  # Dev C: generated valid/invalid contract examples
 tools/sim-client/            # Dev A: headless bots and integration-test client
+tools/dev-tunnel/            # Dev C: HTTPS/WSS quick tunnels for phone testing
 docs/prompts/                # the three per-developer agent prompts
 docs/architecture.md         # server architecture and policies
 docs/STATUS.md               # per-track progress, blockers, limitations
@@ -87,5 +116,9 @@ development-only path and must never be enabled for a real playtest.
 - No HTTP rate limiting yet; the WebSocket limits from PLAN P4.3 are enforced.
 - Join codes are unique per running process only; a restart can recycle them.
 - Session tokens are held in memory on the server and in the client's `sessionStorage`.
-- Camera aiming, GPS boundaries and combat are not implemented in this slice; see
-  [docs/STATUS.md](docs/STATUS.md) for the milestone plan.
+- Camera aiming, GPS boundaries and combat are not implemented in this slice; `evaluateAim` and
+the standalone lab exist, but no real-device aiming result has been recorded. See
+  [docs/STATUS.md](docs/STATUS.md) and [docs/testing.md](docs/testing.md) for the milestone plan
+  and the honest device matrix.
+- Quick tunnels are public while `pnpm dev:tunnel` runs, use random hostnames that change on every
+  start, and stop working when the process exits. Do not treat them as a deployment.

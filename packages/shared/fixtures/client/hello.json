@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "id": "c-hello-1",
+  "type": "HELLO",
+  "payload": {
+    "sessionToken": "fixture-session-token-0000000001"
+  }
+}

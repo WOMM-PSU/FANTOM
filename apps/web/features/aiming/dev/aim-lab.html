@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="FANTOM camera-aiming spike. Not gameplay." />
+    <title>FANTOM aim lab — spike</title>
+    <link rel="stylesheet" href="./aim-lab.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="bar">
+        <div class="title-block">
+          <strong>FANTOM aim lab</strong>
+          <span class="spike-badge">SPIKE — NOT GAMEPLAY</span>
+        </div>
+        <nav class="tabs" aria-label="Lab mode">
+          <button id="tab-aim" class="tab" type="button" role="tab" aria-selected="true">
+            Aim
+          </button>
+          <button id="tab-target" class="tab" type="button" role="tab" aria-selected="false">
+            Target marker
+          </button>
+        </nav>
+      </header>
+
+      <main>
+        <section id="panel-aim" class="panel" role="tabpanel" aria-labelledby="tab-aim">
+          <div class="camera-wrap">
+            <video id="video" playsinline muted autoplay></video>
+            <div class="reticle" aria-hidden="true"></div>
+            <div id="camera-note" class="camera-note">Camera off</div>
+          </div>
+
+          <div class="controls">
+            <div class="button-row">
+              <button id="camera-start" class="primary" type="button">Start camera</button>
+              <button id="camera-stop" type="button" disabled>Stop camera</button>
+              <button id="orientation-start" type="button">Enable orientation</button>
+              <button id="orientation-stop" type="button" disabled>Stop orientation</button>
+            </div>
+
+            <p id="aim-status" class="status" role="status" aria-live="polite">
+              Camera is off. Start it from the button above.
+            </p>
+
+            <div class="settings">
+              <label>
+                Detector
+                <select id="detector">
+                  <option value="auto" selected>Auto (native, then jsQR)</option>
+                  <option value="barcode">BarcodeDetector (native)</option>
+                  <option value="jsqr">jsQR (JavaScript)</option>
+                </select>
+              </label>
+              <label>
+                Horizontal FOV (deg)
+                <input id="hfov" type="number" inputmode="decimal" min="20" max="120" step="0.1" value="60" />
+              </label>
+              <label>
+                Marker physical width (m)
+                <input id="marker-width" type="number" inputmode="decimal" min="0.01" max="0.5" step="0.001" value="0.065" />
+              </label>
+            </div>
+
+            <div class="metrics" aria-label="Detection metrics">
+              <div><span class="metric-label">Detector</span><strong id="metric-detector">—</strong></div>
+              <div><span class="metric-label">Frame</span><strong id="metric-frame">—</strong></div>
+              <div><span class="metric-label">Rate</span><strong id="metric-fps">—</strong></div>
+              <div><span class="metric-label">Latency</span><strong id="metric-latency">—</strong></div>
+            </div>
+
+            <section class="block" aria-labelledby="detections-heading">
+              <h2 id="detections-heading">Detections</h2>
+              <div id="detections" class="detections">
+                <p class="muted">No detection yet.</p>
+              </div>
+              <p class="muted small">
+                Confidence and visible fraction are not exposed by these detector APIs; the lab
+                reports them as unavailable rather than inventing values.
+              </p>
+            </section>
+
+            <details class="block" open>
+              <summary>Orientation / heading</summary>
+              <div class="kv">
+                <div><span>Event</span><strong id="ori-event">—</strong></div>
+                <div><span>Source</span><strong id="ori-source">—</strong></div>
+                <div><span>alpha</span><strong id="ori-alpha">—</strong></div>
+                <div><span>beta</span><strong id="ori-beta">—</strong></div>
+                <div><span>gamma</span><strong id="ori-gamma">—</strong></div>
+                <div><span>absolute</span><strong id="ori-absolute">—</strong></div>
+                <div><span>compass heading</span><strong id="ori-heading">—</strong></div>
+                <div><span>compass accuracy</span><strong id="ori-accuracy">—</strong></div>
+                <div><span>candidate heading</span><strong id="ori-candidate">—</strong></div>
+                <div><span>screen angle</span><strong id="ori-screen">—</strong></div>
+              </div>
+              <p class="muted small">
+                Candidate heading is raw and uncalibrated. The camera's optical axis is not assumed to
+                equal the compass heading; production evidence must carry the calibrated value.
+              </p>
+            </details>
+
+            <details class="block">
+              <summary>hFOV calibration helper</summary>
+              <div class="settings">
+                <label>
+                  Measured distance (m)
+                  <input id="cal-distance" type="number" inputmode="decimal" min="0.1" max="50" step="0.1" value="5" />
+                </label>
+                <label>
+                  Observed marker width (px)
+                  <input id="cal-observed" type="number" inputmode="numeric" min="1" value="" placeholder="from a detection" />
+                </label>
+                <label>
+                  Processing frame width (px)
+                  <input id="cal-frame" type="number" readonly value="" />
+                </label>
+              </div>
+              <div class="button-row">
+                <button id="cal-apply" type="button">Estimate hFOV from last detection</button>
+              </div>
+              <p id="cal-result" class="muted small">
+                Put the marker at a measured distance, detect it once, then estimate the horizontal
+                field of view. This is a manual calibration aid, not a verified device calibration.
+              </p>
+            </details>
+
+            <p class="privacy">
+              Video frames are processed locally in a canvas. Nothing is uploaded or stored by this
+              spike.
+            </p>
+          </div>
+        </section>
+
+        <section id="panel-target" class="panel target-panel" role="tabpanel" aria-labelledby="tab-target" hidden>
+          <div class="target-controls">
+            <label>
+              Marker code (0–255)
+              <input id="marker-code" type="number" inputmode="numeric" min="0" max="255" step="1" value="7" />
+            </label>
+            <button id="marker-render" class="primary" type="button">Render marker</button>
+            <button id="marker-random" type="button">Random code</button>
+            <button id="marker-focus" type="button">Large marker</button>
+          </div>
+
+          <div id="marker-stage" class="marker-stage">
+            <button id="marker-exit" class="marker-exit" type="button" hidden>Exit large marker</button>
+            <canvas id="marker" width="400" height="400" aria-label="FANTOM player marker"></canvas>
+          </div>
+
+          <p class="marker-meta">
+            Payload: <code id="marker-payload">—</code>
+          </p>
+          <p class="muted small">
+            Turn screen brightness up. Do not use a screenshot as a credential: this marker only
+            carries a match-local code and a checksum. No session token is present.
+          </p>
+        </section>
+
+      </main>
+
+      <footer class="footer">
+        <a href="./aim-lab.html">Reset</a>
+        <span>·</span>
+        <span>Camera aiming is approximate; client evidence is not proof of a hit.</span>
+      </footer>
+    </div>
+
+    <script src="./vendor/jsQR.js"></script>
+    <script type="module" src="./aim-lab.js"></script>
+  </body>
+</html>

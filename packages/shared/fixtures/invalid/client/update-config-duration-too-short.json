@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "id": "c-config-1",
+  "type": "UPDATE_CONFIG",
+  "payload": {
+    "config": {
+      "mode": "team_deathmatch",
+      "durationSec": 10
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "seq": 19,
+  "serverTime": 1760000000000,
+  "type": "ERROR",
+  "payload": {
+    "code": "RATE_LIMITED",
+    "message": "Too many messages."
+  },
+  "replyTo": "c-shot-camera-1"
+}

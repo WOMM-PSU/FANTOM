@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "id": "c-ping-1",
+  "type": "PING",
+  "payload": {
+    "clientSentAt": 1759999999000
+  }
+}

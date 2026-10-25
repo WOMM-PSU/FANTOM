@@ -1,0 +1,53 @@
+# C-owned M0 workflow (PLAN P7).
+# Requires the root pnpm workspace, lockfile, and root scripts from Dev A.
+# Do not weaken this workflow to make it pass; land the missing root pieces instead.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck, lint, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.15.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint (when configured)
+        run: |
+          if node -e "process.exit(require('./package.json').scripts?.lint ? 0 : 1)"; then
+            pnpm lint
+          else
+            echo "::warning title=Lint not configured::No root lint script exists yet; see docs/STATUS.md. CI cannot enforce lint until the team chooses a tool."
+          fi
+
+      - name: Test
+        run: pnpm test

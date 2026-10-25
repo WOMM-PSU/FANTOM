@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "seq": 17,
+  "serverTime": 1760000000000,
+  "type": "PICKUP_REJECTED",
+  "payload": {
+    "reason": "PICKUP_TOO_FAR"
+  }
+}

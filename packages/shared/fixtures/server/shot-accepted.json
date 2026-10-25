@@ -1,0 +1,12 @@
+{
+  "v": 1,
+  "seq": 10,
+  "serverTime": 1760000000000,
+  "type": "SHOT_ACCEPTED",
+  "payload": {
+    "targetPlayerId": "p2",
+    "damageDealt": 25,
+    "eliminated": false
+  },
+  "replyTo": "c-shot-camera-1"
+}

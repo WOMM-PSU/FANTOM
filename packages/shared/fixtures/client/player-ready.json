@@ -1,0 +1,13 @@
+{
+  "v": 1,
+  "id": "c-ready-1",
+  "type": "PLAYER_READY",
+  "payload": {
+    "ready": true,
+    "permissions": {
+      "camera": true,
+      "orientation": true,
+      "location": true
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "seq": 15,
+  "serverTime": 1760000000000,
+  "type": "HEAL_REJECTED",
+  "payload": {
+    "reason": "HEAL_COOLDOWN"
+  }
+}

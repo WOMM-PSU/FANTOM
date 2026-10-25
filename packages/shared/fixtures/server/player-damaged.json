@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "seq": 12,
+  "serverTime": 1760000000000,
+  "type": "PLAYER_DAMAGED",
+  "payload": {
+    "attackerId": "p1",
+    "damage": 25,
+    "source": "shot"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "v": 1,
+  "id": "c-shot-dev-1",
+  "type": "REQUEST_SHOT",
+  "payload": {
+    "evidence": {
+      "source": "dev_simulated",
+      "ageMs": 120,
+      "targetMarkerCode": 7,
+      "visibleMarkerCodes": [
+        7
+      ],
+      "markerConfidence": 1,
+      "markerVisibleFraction": 1,
+      "markerOffsetDeg": {
+        "x": 0,
+        "y": 0
+      },
+      "markerWidthPx": 118,
+      "frameWidthPx": 1280,
+      "hfovDeg": 62,
+      "estimatedDistanceM": 12.4,
+      "camera": {
+        "headingDeg": 45,
+        "pitchDeg": 0,
+        "rollDeg": 0,
+        "headingAccuracyDeg": null,
+        "headingSource": "absolute"
+      }
+    }
+  }
+}

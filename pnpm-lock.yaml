@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      qrcode-terminal:
+        specifier: 0.12.0
+        version: 0.12.0
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -37,6 +40,12 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@24.19.2)(tsx@4.23.15)
 
+  packages/aiming:
+    dependencies:
+      '@fantom/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
   apps/web:
     dependencies:
       '@fantom/shared':
@@ -76,6 +85,13 @@ importers:
       zod:
         specifier: ^4.0.0
         version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@24.19.2)(tsx@4.23.15)
 
   tools/mock-server:
     dependencies:
@@ -833,6 +849,9 @@ packages:
     resolution: {integrity: sha512-YUbWYCgErwnMAVkjUnYa+KlMBzGpHwiIt/DE7f0G33AuX2LH9UcTk6KgWxd3zRU+pN3u/C+Xl3EnMLM4Hea7Sg==}
     engines: {node: ^10 || ^12 || >=14}
 
+  qrcode-terminal@0.12.0:
+    resolution: {integrity: sha512-EXtzRZmC+YGmGlDFbXKxQiMZNwCLEO6BANKXG4iCtSIM0yqc/pappSx3RIKr4r0uh5JsBckOXeKrB3Iz7mdQpQ==}
+    hasBin: true
   react-dom@19.3.1:
     resolution: {integrity: sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ==}
     peerDependencies:
@@ -1522,6 +1541,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.2
 
+  qrcode-terminal@0.12.0: {}
   react-dom@19.3.1(react@19.3.1):
     dependencies:
       react: 19.3.1

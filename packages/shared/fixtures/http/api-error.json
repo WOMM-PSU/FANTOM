@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "MATCH_NOT_FOUND",
+    "message": "Match not found."
+  }
+}

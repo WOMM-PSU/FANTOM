@@ -1,0 +1,32 @@
+{
+  "v": 1,
+  "id": "c-shot-camera-1",
+  "type": "REQUEST_SHOT",
+  "payload": {
+    "evidence": {
+      "source": "camera",
+      "ageMs": 120,
+      "targetMarkerCode": 999,
+      "visibleMarkerCodes": [
+        8
+      ],
+      "markerConfidence": 0.92,
+      "markerVisibleFraction": 0.96,
+      "markerOffsetDeg": {
+        "x": 1.25,
+        "y": -0.4
+      },
+      "markerWidthPx": 118,
+      "frameWidthPx": 1280,
+      "hfovDeg": 62,
+      "estimatedDistanceM": 5.2,
+      "camera": {
+        "headingDeg": 88.5,
+        "pitchDeg": 2.1,
+        "rollDeg": -1.2,
+        "headingAccuracyDeg": 6,
+        "headingSource": "absolute"
+      }
+    }
+  }
+}

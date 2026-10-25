@@ -1,0 +1,88 @@
+{
+  "v": 1,
+  "seq": 1,
+  "serverTime": 1760000000000,
+  "type": "WELCOME",
+  "payload": {
+    "playerId": "p1",
+    "protocolVersion": 1,
+    "state": {
+      "matchId": "match-1",
+      "joinCode": "ABCDE",
+      "phase": "lobby",
+      "hostPlayerId": "p1",
+      "config": {
+        "mode": "ffa",
+        "durationSec": 300,
+        "arena": null,
+        "minimap": {
+          "enabled": true,
+          "showAllies": true,
+          "showEnemies": false,
+          "showPickups": true
+        },
+        "pickups": {
+          "weapons": true,
+          "health": true,
+          "shields": true,
+          "respawnSec": 30
+        },
+        "team": {
+          "teamCount": 2,
+          "killersPerHealer": 2
+        },
+        "spawnLockoutSec": 5,
+        "maxRangeM": 30,
+        "devMode": false
+      },
+      "players": [
+        {
+          "id": "p1",
+          "displayName": "Ada",
+          "teamId": null,
+          "role": null,
+          "status": "alive",
+          "connected": true,
+          "ready": true,
+          "healthFraction": 1,
+          "score": 0,
+          "position": null
+        },
+        {
+          "id": "p2",
+          "displayName": "Babbage",
+          "teamId": null,
+          "role": null,
+          "status": "alive",
+          "connected": true,
+          "ready": false,
+          "healthFraction": 1,
+          "score": 0,
+          "position": null
+        }
+      ],
+      "self": {
+        "playerId": "p1",
+        "markerCode": 7,
+        "health": 100,
+        "maxHealth": 100,
+        "shield": 0,
+        "weaponId": null,
+        "ammo": 0,
+        "nextShotAt": 0,
+        "reloadCompleteAt": null,
+        "spawnLockedUntil": 0,
+        "locationQuality": "none",
+        "inZone": null,
+        "returnGraceUntil": null
+      },
+      "pickups": [],
+      "teamScores": {},
+      "countdownEndsAt": null,
+      "startedAt": null,
+      "endsAt": null,
+      "result": null
+    }
+  },
+  "replyTo": "c-hello-1"
+}

@@ -10,9 +10,11 @@
     "dev": "pnpm build && pnpm --parallel -r --if-present run dev",
     "typecheck": "pnpm build && pnpm -r --if-present run typecheck",
     "test": "pnpm build && pnpm -r --if-present run test",
+    "dev:tunnel": "node tools/dev-tunnel/index.mjs",
     "sim": "pnpm --filter @fantom/sim-client run start"
   },
   "devDependencies": {
+    "qrcode-terminal": "0.12.0",
     "typescript": "^5.7.0"
   }
 }
