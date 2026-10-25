@@ -104,3 +104,31 @@ Unimplemented actions are refused rather than half-applied; see `docs/STATUS.md`
 - `pnpm sim --server http://localhost:8080 --bots 2` drives a real lobby and prints snapshots.
 - Tests parse every received server message with `ServerMessage` and assert hidden fields are
   absent from payloads.
+
+---
+
+## Client application (`apps/web` & `tools/mock-server` — Dev B)
+
+### Structure and routing
+
+- `apps/web` is a Next.js App Router mobile-first web client (`@fantom/web`).
+- Routes:
+  - `/` (`app/page.tsx`): Create match (`POST /api/matches`), join by 5-character code, or resume an existing session stored in `sessionStorage`.
+  - `/join/[code]` (`app/join/[code]/page.tsx`): Queries `GET /api/matches/:code` (`MatchSummary`), surfaces `MATCH_NOT_FOUND` / `LOBBY_FULL` / `WRONG_PHASE` with a retry path, and submits `POST /api/matches/:code/join`.
+  - `/match/[id]` (`app/match/[id]/page.tsx`): Establishes the WebSocket connection and renders the phase view (`LobbyView` → Countdown safety screen → `ActiveMatchHud` → `ResultsView`).
+
+### State authority and networking (`hooks/useGameSocket.ts`)
+
+- On WebSocket open, the client immediately sends `HELLO { sessionToken }` using the token stored in `sessionStorage` (`fantom.session.v1`).
+- Every inbound WebSocket frame is validated at runtime with `ServerMessage.safeParse` from `@fantom/shared`; invalid frames are dropped and logged.
+- `WELCOME` and `MATCH_STATE` replace the client's `MatchState` wholesale. Event messages (`SHOT_ACCEPTED`, `SHOT_REJECTED`, `PLAYER_DAMAGED`, etc.) drive transient UI feedback only; the client never mutates ammo, health, cooldowns, or scores locally.
+- On unexpected disconnect, the client discards its stale `MatchState`, displays a persistent `"Reconnecting to game server…"` banner with a manual retry button, and reconnects with exponential backoff by re-sending `HELLO`.
+
+### Server clock synchronization (`hooks/useServerClock.ts`)
+
+- The client sends `PING { clientSentAt }` every 5 seconds and computes an exponentially smoothed `serverClockOffsetMs` from `PONG` and server envelope `serverTime`.
+- All server timestamps (`countdownEndsAt`, `endsAt`, `nextShotAt`, `reloadCompleteAt`, `spawnLockedUntil`) are rendered relative to `Date.now() + serverClockOffsetMs`.
+
+### Mock server (`tools/mock-server`)
+
+- `@fantom/mock-server` (`pnpm --filter @fantom/mock-server start`) implements the HTTP and WebSocket contract in memory (including a seeded mock bot) so UI screens can be developed and tested before server milestones land.

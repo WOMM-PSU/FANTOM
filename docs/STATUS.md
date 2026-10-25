@@ -69,7 +69,41 @@ One section per developer. Keep it current at the end of every session:
 
 ## Dev B — Client app & UX
 
-Not started in this workspace (no `apps/web`). No status reported yet.
+### Done
+
+- **M0 (B column):**
+  - `apps/web` Next.js 15 App Router skeleton (`@fantom/web`), strict TypeScript config, `.env.example` pointing to `:8080`, and mobile-first dark theme (`app/globals.css`).
+  - `tools/mock-server` (`@fantom/mock-server`) implementing the contract's HTTP endpoints (`GET /health`, `POST /api/matches`, `GET /api/matches/:code`, `POST /api/matches/:code/join`) and WebSocket `/ws` (`HELLO`/`WELCOME`, `PING`/`PONG`, `PLAYER_READY`, `UPDATE_CONFIG`, `REQUEST_MATCH_START`, `UPDATE_LOCATION`, `REQUEST_SHOT`, `LEAVE_MATCH`) with a seeded mock bot for standalone UI verification.
+- **M1 (B column):**
+  - Home route (`/`): Create Match and Join by 5-character code forms, plus active session resume prompt (`sessionStorage`).
+  - Join route (`/join/[code]`): `GET /api/matches/:code` lookup preview, error/retry handling (`MATCH_NOT_FOUND`, `LOBBY_FULL`, `WRONG_PHASE`), and display-name join submission.
+  - Match route (`/match/[id]`) & `features/lobby/LobbyView.tsx`: scannable dependency-free SVG QR code of `joinUrl` (never encodes `sessionToken`), live player list with host/self/offline/ready badges (text + icon, never color alone), ready toggle (`PLAYER_READY`), host mode/duration/minimap/pickup controls (`UPDATE_CONFIG`), and always-visible **Leave Match** button (`LEAVE_MATCH`).
+  - Networking & timing hooks: `useGameSocket` (runtime `ServerMessage` zod validation, `HELLO` handshake, auto-reconnect discarding stale state, error banner with retry) and `useServerClock` (`PING`/`PONG` smoothed clock offset).
+  - Unit tests in `apps/web/test/clock-and-session.test.ts` (12 tests covering clock offset math, countdown clamping, join-code validation, 24-gon arena builder, QR matrix generation, local-meters minimap projection, exhaustive `RejectReason` human-readable messages, team/role badges, and `makeDevEvidence`).
+- **M2–M6 Client App & HUD (`apps/web` & `tools/mock-server`):**
+  - `useGeolocation` hook (`watchPosition`, 1–2 Hz throttling, active during `countdown`/`active` phases), 24-sided circular arena builder (`lib/arena.ts`), local-meters SVG minimap (`features/minimap/MinimapSvg.tsx`), countdown safety screen, and results view (`features/results/ResultsView.tsx`).
+  - `features/hud/aimingBridge.tsx`: Seam B↔C surface (`PlayerMarker`, `AimView`, `useAiming`, `makeDevEvidence`) with real browser camera/orientation permission checks, iOS `DeviceOrientationEvent.requestPermission()` gesture flow, track cleanup on unmount, and `AimUnavailableReason` recovery UI.
+  - `features/hud/ActiveMatchHud.tsx`: Mode-aware HUD (`ffa`, `assassin`, `team_deathmatch`) with non-color-only team indicators (`getTeamBadge`), Assassin/Survivor objective banners, Healer action kit (`REQUEST_HEAL` + 5s cooldown), arena pickup collection panel (`REQUEST_PICKUP`), weapon variants (`Pulse`, `Ravager`, `Viper`), and server-clock synced timers.
+- Verified locally: `pnpm typecheck` green across all workspace packages, `pnpm test` green (38 tests across server + web), and `pnpm --filter @fantom/web build:web` production Next.js build green.
+
+### In progress
+
+- End-to-end two-phone lobby verification over HTTPS tunnel once Dev C's `pnpm dev:tunnel` lands.
+- Wiring M2 lifecycle & positioning against `apps/server` once Dev A's M2 handlers (`REQUEST_MATCH_START`, `UPDATE_LOCATION`) land.
+
+### Blocked on
+
+- **Dev C:** `pnpm dev:tunnel` (M0) for two-phone HTTPS QR join verification, and `apps/web/features/aiming` (`AimView`, `PlayerMarker`, `useAiming`, `makeDevEvidence`) for M3/M4 camera aiming integration.
+- **Dev A:** M2 server handlers (`REQUEST_MATCH_START`, `UPDATE_LOCATION`) to test countdown, arena boundary, and active match transitions against the real server (currently tested against `tools/mock-server`).
+
+### Contract change requests
+
+- **Optional for M2+ (Safety Abort):** `PLAN.md` S10.6 / S15.5 require an immediate way to stop a match and `MatchResult.endedReason` includes `"host_ended"`, but `ClientMessage` has no explicit `END_MATCH`/`ABORT_MATCH` message (unless host `LEAVE_MATCH` during an active match ends it with `"host_ended"`).
+
+### Known issues / limitations
+
+- Verified via automated unit tests, `tsc`, and `next build` on desktop; real two-phone QR join verification over HTTPS is pending `pnpm dev:tunnel`.
+- In `ActiveMatchHud.tsx`, the camera aiming viewport currently renders a placeholder slot and a `[DEV_ONLY]` simulated target picker (only shown when `config.devMode === true`) until Dev C delivers `apps/web/features/aiming`.
 
 ## Dev C — Aiming, sensors & platform
 
